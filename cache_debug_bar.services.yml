@@ -1,0 +1,5 @@
+services:
+  cache_debug_bar.middleware:
+    class: Drupal\cache_debug_bar\CacheDebugBarMiddleware
+    tags:
+      - { name: http_middleware, priority: 1000 }

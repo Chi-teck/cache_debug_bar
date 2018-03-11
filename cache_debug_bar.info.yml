@@ -1,0 +1,5 @@
+name: Cache debug bar
+type: module
+description: Provides a simple debug bar with information about page cache.
+package: Development
+core: 8.x
