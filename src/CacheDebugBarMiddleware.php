@@ -2,7 +2,6 @@
 
 namespace Drupal\cache_debug_bar;
 
-use Drupal\Core\StringTranslation\StringTranslationTrait;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpKernel\HttpKernelInterface;
 
@@ -10,8 +9,6 @@ use Symfony\Component\HttpKernel\HttpKernelInterface;
  * CacheDebugBarMiddleware middleware.
  */
 class CacheDebugBarMiddleware implements HttpKernelInterface {
-
-  use StringTranslationTrait;
 
   /**
    * The kernel.
@@ -44,16 +41,24 @@ class CacheDebugBarMiddleware implements HttpKernelInterface {
       return $response;
     }
 
+    $content = $response->getContent();
+
+    if (stripos($content, '</body>') === FALSE) {
+      return $response;
+    }
+
     $start = $_SERVER['REQUEST_TIME_FLOAT'];
     $finish = microtime(TRUE);
     $time = number_format(1000 * ($finish - $start), 1, '.', '') . ' ms';
 
-    $cache = $response->headers->get('X-Drupal-Cache') ?: 'NONE';
-    $cache_class = 'cache-debug-' . strtolower($cache);
+    $anonymous_cache = $response->headers->get('X-Drupal-Cache') ?: 'NONE';
+    $anonymous_cache_class = 'cache-debug-' . strtolower($anonymous_cache);
 
-    $dynamic_cache = $response->headers->get('X-Drupal-Dynamic-Cache')?: 'NONE';
+    $dynamic_cache = $response->headers->get('X-Drupal-Dynamic-Cache') ?: 'NONE';
     $dynamic_cache_class = 'cache-debug-' . strtolower($dynamic_cache);
 
+    // There is no way to render the bar using Renderer::renderPlain() because
+    // Request stack is already empty at this moment.
     $bar = <<<EOF
 <style>
   .cache-debug-bar {
@@ -87,16 +92,10 @@ class CacheDebugBarMiddleware implements HttpKernelInterface {
 </style>
 <div class="cache-debug-bar">
   <div class="cache-debug-bar-time-item" title="Execution time" class="page-cache-time">$time</div>
-  <div class="cache-debug-bar-cache-item $cache_class" title="Page cache" class="">$cache</div>
+  <div class="cache-debug-bar-cache-item $anonymous_cache_class" title="Page cache" class="">$anonymous_cache</div>
   <div class="cache-debug-bar-dynamic-cache-item $dynamic_cache_class" title="Dynamic page cache">$dynamic_cache</div>
 </div>
 EOF;
-
-    $content = $response->getContent();
-
-    if (stripos($content, '</body>') === FALSE) {
-      return $response;
-    }
 
     $response->setContent(str_replace('</body>', $bar . '</body>', $content));
     return $response;
